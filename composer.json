@@ -1,0 +1,33 @@
+{
+    "name": "biurad/filephp",
+    "description": "This file is used to get rid of some discouraged file funtions when it comes to php filesystem.",
+    "keywords": ["filephp", "php5", "php7", "biurad", "biurad-toolbox", "filesystem"],
+    "type": "library",
+    "homepage": "https://biurad.ml",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Divine Niiquaye",
+            "email": "hello@biuhub.net"
+        },
+        {
+            "name": "Biurad Lap Community",
+            "homepage": "https://biurad.ml/contributors"
+        }
+    ],
+    "minimum-stability": "stable",
+    "config": {
+        "vendor-dir": "vendor",
+        "sort-packages": true
+    },
+    "autoload": {
+        "files": [
+            "autoload.php"
+        ]
+    },
+    "require": {},
+    "suggest": {
+        "symfony/finder": "Symfony Finder Component ^4.3, to handle finding files and directories",
+        "biurad/filesystem": "Biurad Filesystem Toolbox ^1.0, to handle advanced filesystem usage."
+    }
+}
