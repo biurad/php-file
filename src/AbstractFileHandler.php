@@ -401,7 +401,7 @@ class AbstractFileHandler
         // If the path already exists and is a symlink, get the real path...
         $this->silencer->call('clearstatcache', true, $this->path);
 
-        $path = realpath($this->path) ?: $this->path;
+        $path = $this->silencer->call('realpath', $this->path) ?: $this->path;
 
         $tempPath = $this->silencer->call('tempnam', $this->dirname(), $this->silencer->call('basename', $path));
 

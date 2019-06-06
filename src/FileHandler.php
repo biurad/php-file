@@ -159,7 +159,7 @@ class FileHandler extends AbstractFileHandler
     public function real(): string
     {
         if (isset($this->path)) {
-            return realpath($this->path);
+            return $this->silencer->call('realpath', $this->path);
         }
     }
 
@@ -213,7 +213,7 @@ class FileHandler extends AbstractFileHandler
     public function type()
     {
         if (isset($this->path)) {
-            return filetype($this->path);
+            return $this->silencer->call('filetype', $this->path);
         }
     }
 
@@ -309,7 +309,7 @@ class FileHandler extends AbstractFileHandler
     public function chmod($perm, $add): bool
     {
         if (isset($this->path)) {
-            return $this->silencer->call('chmod', $this->path, (fileperms($this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8)) ^ $add);
+            return $this->silencer->call('chmod', $this->path, ($this->silencer->call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8)) ^ $add);
         }
     }
 
