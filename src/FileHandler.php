@@ -239,7 +239,7 @@ class FileHandler extends AbstractFileHandler
     public function change_group(mixed $group): bool
     {
         if (isset($this->path)) {
-            return Silencer::call('chgrp', $this->path, $group);
+            return $this->silencer->call('chgrp', $this->path, $group);
         }
     }
 
@@ -253,7 +253,7 @@ class FileHandler extends AbstractFileHandler
     public function change_owner(mixed $user): bool
     {
         if (isset($this->path)) {
-            return Silencer::call('chown', $this->path, $user);
+            return $this->silencer->call('chown', $this->path, $user);
         }
     }
 
@@ -268,7 +268,7 @@ class FileHandler extends AbstractFileHandler
     {
         if (isset($this->path)) {
             $this->contents = $this->exists()
-                ? Silencer::call('clearstatcache', $clear_realpath_cache, $this->path) : '';
+                ? $this->silencer->call('clearstatcache', $clear_realpath_cache, $this->path) : '';
         }
 
         return (string) $this->contents;
@@ -286,13 +286,13 @@ class FileHandler extends AbstractFileHandler
     public function copy($targetFile)
     {
         // https://bugs.php.net/bug.php?id=64634
-        if (!Silencer::call('is_readable', $this->path)) {
+        if (!$this->silencer->call('is_readable', $this->path)) {
             throw new FileException(sprintf('Failed to copy "%s" to "%s" because source file could not be opened for reading.', $this->path, $targetFile));
         }
 
-        return Silencer::call('copy', $this->path, $targetFile);
+        return $this->silencer->call('copy', $this->path, $targetFile);
 
-        if (!Silencer::call('is_file', $targetFile)) {
+        if (!$this->silencer->call('is_file', $targetFile)) {
             throw new FileException(sprintf('Failed to copy "%s" to "%s".', $this->path, $targetFile));
         }
     }
@@ -309,7 +309,7 @@ class FileHandler extends AbstractFileHandler
     public function chmod($perm, $add): bool
     {
         if (isset($this->path)) {
-            return Silencer::call('chmod', $this->path, (fileperms($this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8)) ^ $add);
+            return $this->silencer->call('chmod', $this->path, (fileperms($this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8)) ^ $add);
         }
     }
 
@@ -320,9 +320,9 @@ class FileHandler extends AbstractFileHandler
      */
     public function free_space(): string
     {
-        if (isset($this->path) && Silencer::call('is_dir', $this->path)) {
+        if (isset($this->path) && $this->silencer->call('is_dir', $this->path)) {
             $this->contents = $this->exists()
-                ? $this->format_memory(Silencer::call('disk_free_space', $this->path)) : '';
+                ? $this->format_memory($this->silencer->call('disk_free_space', $this->path)) : '';
         }
 
         return (string) $this->contents;
@@ -341,7 +341,7 @@ class FileHandler extends AbstractFileHandler
     public function touch($time = null, $atime = null)
     {
         foreach ($this->toIterable($this->path) as $file) {
-            $touch = $time ? Silencer::call('touch', $file, $time, $atime) : Silencer::call('touch', $file);
+            $touch = $time ? $this->silencer->call('touch', $file, $time, $atime) : $this->silencer->call('touch', $file);
             if (true !== $touch) {
                 throw new FileException(sprintf('Failed to touch "%s".', $file));
             }
@@ -366,7 +366,7 @@ class FileHandler extends AbstractFileHandler
 
         $mode = $this->is_dir() ? 'J' : 'H';
 
-        Silencer::call('exec', sprintf("mklink /{$mode} \"{$link}\" \"{$this->path}\""));
+        $this->silencer->call('exec', sprintf("mklink /{$mode} \"{$link}\" \"{$this->path}\""));
     }
 
     /**
@@ -378,8 +378,8 @@ class FileHandler extends AbstractFileHandler
      */
     public function size(): string
     {
-        if (Silencer::call('is_file', $this->path)) {
-            $size = Silencer::call('filesize', $this->path) ?: 0;
+        if ($this->silencer->call('is_file', $this->path)) {
+            $size = $this->silencer->call('filesize', $this->path) ?: 0;
         } else {
             $size = 0;
             foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->path, \RecursiveDirectoryIterator::SKIP_DOTS | \RecursiveDirectoryIterator::FOLLOW_SYMLINKS)) as $file) {
@@ -399,7 +399,7 @@ class FileHandler extends AbstractFileHandler
     {
         if (isset($this->path)) {
             $this->contents = $this->exists()
-                ? $this->format_memory(Silencer::call('disk_total_space', $this->path)) : '';
+                ? $this->format_memory($this->silencer->call('disk_total_space', $this->path)) : '';
         }
 
         return (string) $this->contents;
@@ -413,7 +413,7 @@ class FileHandler extends AbstractFileHandler
     public function file(): array
     {
         if (isset($this->path)) {
-            $this->contents = Silencer::call('file', $this->path);
+            $this->contents = $this->silencer->call('file', $this->path);
         }
 
         return (array) $this->contents;
@@ -427,7 +427,7 @@ class FileHandler extends AbstractFileHandler
     public function info(): array
     {
         if (isset($this->path)) {
-            return Silencer::call('lstat', $this->path);
+            return $this->silencer->call('lstat', $this->path);
         }
     }
 
@@ -441,7 +441,7 @@ class FileHandler extends AbstractFileHandler
     public function rename($filename)
     {
         if (isset($this->path)) {
-            if ($this->exists() && !Silencer::call('rename', $this->path, $filename)) {
+            if ($this->exists() && !$this->silencer->call('rename', $this->path, $filename)) {
                 return false;
             }
 
@@ -477,7 +477,7 @@ class FileHandler extends AbstractFileHandler
     public function readfile(): bool
     {
         if (isset($this->path)) {
-            $this->contents = $this->exists() ?? Silencer::call('readfile', $this->path);
+            $this->contents = $this->exists() ?? $this->silencer->call('readfile', $this->path);
         }
 
         return (bool) $this->contents;
@@ -491,7 +491,7 @@ class FileHandler extends AbstractFileHandler
     public function modified(): bool
     {
         if (isset($this->path)) {
-            return $this->is_file() ? Silencer::call('filemtime', $this->path) : false;
+            return $this->is_file() ? $this->silencer->call('filemtime', $this->path) : false;
         }
     }
 
@@ -503,7 +503,7 @@ class FileHandler extends AbstractFileHandler
     public function creation(): bool
     {
         if (isset($this->path)) {
-            return $this->is_file() ? Silencer::call('filectime', $this->this->filename) : time();
+            return $this->is_file() ? $this->silencer->call('filectime', $this->this->filename) : time();
         }
     }
 
@@ -517,7 +517,7 @@ class FileHandler extends AbstractFileHandler
     public function exec(bool $shell = true): string
     {
         if (isset($this->path)) {
-            $this->contents = $shell ? Silencer::call('shell_exec', $this->path) : Silencer::call('exec', $this->path);
+            $this->contents = $shell ? $this->silencer->call('shell_exec', $this->path) : $this->silencer->call('exec', $this->path);
         }
 
         return (string) $this->contents;
@@ -534,7 +534,7 @@ class FileHandler extends AbstractFileHandler
     {
         if (isset($this->path)) {
             $handle = $this->silencer->call('fopen', $this->path, 'r');
-            $this->contents = $file ? Silencer::call('fpassthru', $handle) : Silencer::call('passthru', $this->path);
+            $this->contents = $file ? $this->silencer->call('fpassthru', $handle) : $this->silencer->call('passthru', $this->path);
             $this->silencer->call('fclose', $handle);
         }
 
@@ -567,7 +567,7 @@ class FileHandler extends AbstractFileHandler
     {
         $search = !empty($fileExtension) ? '*'.$fileExtension : '*';
 
-        return count(Silencer::call('glob', $this->path.$search));
+        return count($this->silencer->call('glob', $this->path.$search));
     }
 
     /**
@@ -596,7 +596,7 @@ class FileHandler extends AbstractFileHandler
             //@codeCoverageIgnoreEnd
         }
 
-        list($myuid, $mygid) = [Silencer::call('posix_geteuid'), Silencer::call('posix_getgid')];
+        list($myuid, $mygid) = [$this->silencer->call('posix_geteuid'), $this->silencer->call('posix_getgid')];
 
         $isMyUid = $stat['uid'] === $myuid;
         $isMyGid = $stat['gid'] === $mygid;
@@ -605,16 +605,16 @@ class FileHandler extends AbstractFileHandler
         if ($isFlag) {
             // Set only the user writable bit (file is owned by us)
             if ($isMyUid) {
-                return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.'00', 8));
+                return $this->silencer->call('chmod', $this->path, $this->silencer->call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.'00', 8));
             }
 
             // Set only the group writable bit (file group is the same as us)
             if ($isMyGid) {
-                return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.$perm.'0', 8));
+                return $this->silencer->call('chmod', $this->path, $this->silencer->call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.$perm.'0', 8));
             }
 
             // Set the world writable bit (file isn't owned or grouped by us)
-            return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8));
+            return $this->silencer->call('chmod', $this->path, $this->silencer->call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8));
         }
 
         // Set only the user writable bit (file is owned by us)
@@ -661,7 +661,7 @@ class FileHandler extends AbstractFileHandler
             }
 
             /** @noinspection CallableParameterUseCaseInTypeContextInspection */
-            $perms = Silencer::call('fileperms', $this->path);
+            $perms = $this->silencer->call('fileperms', $this->path);
         }
 
         //@codeCoverageIgnoreStart
