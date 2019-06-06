@@ -130,7 +130,7 @@ class FileHandler extends AbstractFileHandler
     public function basename(): string
     {
         if (isset($this->path)) {
-            $this->contents = $this->exists() ? pathinfo($this->path, PATHINFO_BASENAME) : '';
+            $this->contents = $this->exists() ? $this->silencer->call('pathinfo', $this->path, PATHINFO_BASENAME) : '';
         }
 
         return (string) $this->contents;
@@ -147,7 +147,7 @@ class FileHandler extends AbstractFileHandler
             $path = preg_replace('#\?(.*)#', '', $this->path);
         }
 
-        $ext = pathinfo($path, PATHINFO_EXTENSION);
+        $ext = $this->silencer->call('pathinfo', $path, PATHINFO_EXTENSION);
         $ext = strtolower($ext);
 
         return $ext;
@@ -182,7 +182,7 @@ class FileHandler extends AbstractFileHandler
         $path = trim((string) $path);
 
         if (empty($path)) {
-            $path = $_SERVER['DOCUMENT_ROOT'] ?: '';
+            $path = @$_SERVER['DOCUMENT_ROOT'] ?: '';
         } elseif (($dirSep === '\\') && ($path[0] === '\\') && ($path[1] === '\\')) {
             $path = '\\'.preg_replace('#[/\\\\]+#', $dirSep, $path);
         } else {
@@ -225,7 +225,7 @@ class FileHandler extends AbstractFileHandler
     public function mime_type()
     {
         if (isset($this->path)) {
-            return \finfo_file(finfo_open(FILEINFO_MIME_TYPE), $this->path);
+            return $this->silencer->call('finfo_file', $this->silencer->call('finfo_open', FILEINFO_MIME_TYPE), $this->path);
         }
     }
 
@@ -309,7 +309,7 @@ class FileHandler extends AbstractFileHandler
     public function chmod($perm, $add): bool
     {
         if (isset($this->path)) {
-            return Silencer::call('chmod', $this->path, (fileperms($this->path) | intval('0'.$perm.$perm.$perm, 8)) ^ $add);
+            return Silencer::call('chmod', $this->path, (fileperms($this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8)) ^ $add);
         }
     }
 
@@ -361,7 +361,7 @@ class FileHandler extends AbstractFileHandler
         }
 
         if (!strncasecmp(PHP_OS, 'WIN', 3) === 0) {
-            return symlink($this->path, $link);
+            return $this->silencer->call('symlink', $this->path, $link);
         }
 
         $mode = $this->is_dir() ? 'J' : 'H';
@@ -463,7 +463,7 @@ class FileHandler extends AbstractFileHandler
     public function pathinfo(int $options = null)
     {
         if (isset($this->path)) {
-            $this->contents = $this->exists() ? \pathinfo($this->path, $options) : '';
+            $this->contents = $this->exists() ? $this->silencer->call('pathinfo', $this->path, $options) : '';
         }
 
         return $this->contents;
@@ -533,9 +533,9 @@ class FileHandler extends AbstractFileHandler
     public function passthru(bool $file = true)
     {
         if (isset($this->path)) {
-            $handle = \fopen($this->path, 'r');
+            $handle = $this->silencer->call('fopen', $this->path, 'r');
             $this->contents = $file ? Silencer::call('fpassthru', $handle) : Silencer::call('passthru', $this->path);
-            \fclose($handle);
+            $this->silencer->call('fclose', $handle);
         }
 
         return $this->contents;
@@ -579,7 +579,7 @@ class FileHandler extends AbstractFileHandler
      */
     protected function set_permission($filename = null, $isFlag, $perm)
     {
-        $stat = @stat($this->path);
+        $stat = @$this->silencer->call('stat', $this->path);
 
         if (null !== $filename) {
             $this->path = $filename;
@@ -605,34 +605,34 @@ class FileHandler extends AbstractFileHandler
         if ($isFlag) {
             // Set only the user writable bit (file is owned by us)
             if ($isMyUid) {
-                return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | intval('0'.$perm.'00', 8));
+                return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.'00', 8));
             }
 
             // Set only the group writable bit (file group is the same as us)
             if ($isMyGid) {
-                return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | intval('0'.$perm.$perm.'0', 8));
+                return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.$perm.'0', 8));
             }
 
             // Set the world writable bit (file isn't owned or grouped by us)
-            return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | intval('0'.$perm.$perm.$perm, 8));
+            return Silencer::call('chmod', $this->path, Silencer::call('fileperms', $this->path) | $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8));
         }
 
         // Set only the user writable bit (file is owned by us)
         if ($isMyUid) {
-            $add = intval('0'.$perm.$perm.$perm, 8);
+            $add = $this->silencer->call('intval', '0'.$perm.$perm.$perm, 8);
 
             return $this->chmod($perm, $add);
         }
 
         // Set only the group writable bit (file group is the same as us)
         if ($isMyGid) {
-            $add = intval('00'.$perm.$perm, 8);
+            $add = $this->silencer->call('intval', '00'.$perm.$perm, 8);
 
             return $this->chmod($perm, $add);
         }
 
         // Set the world writable bit (file isn't owned or grouped by us)
-        $add = intval('000'.$perm, 8);
+        $add = $this->silencer->call('intval', '000'.$perm, 8);
 
         return $this->chmod($perm, $add);
         //@codeCoverageIgnoreEnd

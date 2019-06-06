@@ -54,6 +54,11 @@ class AbstractFileHandler
     protected $contents;
 
     /**
+     * @var Silencer parsed file contents and get all
+     */
+    protected $silencer;
+
+    /**
      * @var mixed For user usuage
      */
     const FILE = false;
@@ -92,6 +97,7 @@ class AbstractFileHandler
         if ($path !== null) {
             $this->path = $this->toIterable($path);
         }
+        $this->silencer = new Silencer();
 
         return (string) isset($this->path);
     }
@@ -160,7 +166,7 @@ class AbstractFileHandler
      */
     public function name()
     {
-        return pathinfo($this->path, PATHINFO_FILENAME);
+        return $this->silencer->call('pathinfo', $this->path, PATHINFO_FILENAME);
     }
 
     /**
@@ -192,7 +198,7 @@ class AbstractFileHandler
     {
         $contents = '';
 
-        $handle = \fopen($path, 'rb');
+        $handle = $this->silencer->call('fopen', $path, 'rb');
 
         if ($handle) {
             try {
@@ -204,7 +210,7 @@ class AbstractFileHandler
                     Silencer::call('flock', $handle, LOCK_UN);
                 }
             } finally {
-                \fclose($handle);
+                $this->silencer->call('fclose', $handle);
             }
         }
 
@@ -223,9 +229,9 @@ class AbstractFileHandler
         $contents = null;
 
         if ($realPath = $this->path) {
-            $handle = fopen($realPath, $mode);
-            $contents = Silencer::call('fread', $handle, filesize($realPath) ?: 4096);
-            fclose($handle);
+            $handle = $this->silencer->call('fopen', $realPath, $mode);
+            $contents = Silencer::call('fread', $handle, $this->silencer->call('filesize', $realPath) ?: 4096);
+            $this->silencer->call('fclose', $handle);
         }
 
         return $contents;
@@ -240,9 +246,9 @@ class AbstractFileHandler
     public function first_line()
     {
         if ($this->exists()) {
-            $cacheRes = \fopen($this->path, 'rb');
+            $cacheRes = $this->silencer->call('fopen', $this->path, 'rb');
             $firstLine = Silencer::call('fgets', $cacheRes);
-            fclose($cacheRes);
+            $this->silencer->call('fclose', $cacheRes);
 
             return $firstLine;
         }
@@ -260,7 +266,7 @@ class AbstractFileHandler
     public function has_string(string $str): bool
     {
         if (isset($this->path)) {
-            $handle = fopen($this->path, 'r');
+            $handle = $this->silencer->call('fopen', $this->path, 'r');
 
             if ($handle === false) {
                 return false;
@@ -281,7 +287,7 @@ class AbstractFileHandler
                 $prev = $cur;
             }
 
-            fclose($handle);
+            $this->silencer->call('fclose', $handle);
 
             return $valid;
         }
@@ -431,7 +437,7 @@ class AbstractFileHandler
             if ($this->handle) {
                 $tmp = true;
                 // As we are using non-truncating locking, make sure that the file is empty before writing.
-                if (Silencer::call('ftruncate', $this->handle, 0) === false || @fwrite($this->handle, $data) === false) {
+                if (Silencer::call('ftruncate', $this->handle, 0) === false || @$this->silencer->call('fwrite', $this->handle, $data) === false) {
                     // Writing file failed, throw an error.
                     $tmp = false;
                 }
@@ -492,7 +498,7 @@ class AbstractFileHandler
             $this->contents = $value ? 'true' : 'false';
         }
         if (is_string($value)) {
-            $this->contents = addslashes($value);
+            $this->contents = $this->silencer->call('addslashes', $value);
         }
         if (null === $value) {
             $this->contents = 'null';
@@ -593,7 +599,7 @@ class AbstractFileHandler
 
                 $currentPath = $this->path.'/'.$file;
 
-                if (is_dir($currentPath)) {
+                if ($this->silencer->call('is_dir', $currentPath)) {
                     $this->remove_dir($currentPath, $traverseSymlinks);
                 } elseif (!Silencer::call('unlink', $currentPath)) {
                     // @codeCoverageIgnoreStart
@@ -605,7 +611,7 @@ class AbstractFileHandler
 
         // @codeCoverageIgnoreStart
         // Windows treats removing directory symlinks identically to removing directories.
-        if (!defined('PHP_WINDOWS_VERSION_MAJOR') && is_link($this->path)) {
+        if (!defined('PHP_WINDOWS_VERSION_MAJOR') && $this->silencer->call('is_link', $this->path)) {
             if (!$this->delete()) {
                 throw new \RuntimeException(sprintf('Unable to delete %s', $dir));
             }
@@ -708,7 +714,7 @@ class AbstractFileHandler
     public function dirname(): string
     {
         if (isset($this->path)) {
-            $this->contents = pathinfo($this->path, PATHINFO_DIRNAME);
+            $this->contents = $this->silencer->call('pathinfo', $this->path, PATHINFO_DIRNAME);
         }
 
         return (string) $this->contents;
@@ -775,7 +781,7 @@ class AbstractFileHandler
             if (!$this->mkdir($this->dirname())) {
                 throw new \RuntimeException(sprintf('Creating directory failed for %s', $this->path));
             }
-            $this->handle = @fopen($this->path, 'cb+');
+            $this->handle = @$this->silencer->call('fopen', $this->path, 'cb+');
             if (!$this->handle) {
                 $error = error_get_last();
 
@@ -814,7 +820,7 @@ class AbstractFileHandler
             Silencer::call('flock', $this->handle, LOCK_UN);
             $this->locked = null;
         }
-        fclose($this->handle);
+        $this->silencer->call('fclose', $this->handle);
         $this->handle = null;
 
         return true;
@@ -878,6 +884,6 @@ class AbstractFileHandler
      */
     public function executable($executable = true): bool
     {
-        return $this->set_permission($this->path, $executable, 1) && Silencer::call('is_executable', $this->path);
+        return $this->set_permission($this->path, $executable, 1);
     }
 }
