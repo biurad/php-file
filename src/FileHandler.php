@@ -19,9 +19,14 @@ namespace BiuradPHP\Toolbox\FilePHP;
  * funtion usuage when it comes to php filesystem.
  *
  * @author Divine Niiquaye <hello@biuhub.net>
+ * @license MIT
  */
 class FileHandler extends AbstractFileHandler
 {
+    public function __construct()
+    {
+        parent::__construct();
+    }
     /**
      * Get relative path between target and base path. If path isn't relative, return full path.
      *
@@ -156,7 +161,7 @@ class FileHandler extends AbstractFileHandler
     /**
      * @return string
      */
-    public function real(): string
+    public function realpath(): string
     {
         if (isset($this->path)) {
             return $this->silencer->call('realpath', $this->path);
@@ -227,6 +232,47 @@ class FileHandler extends AbstractFileHandler
         if (isset($this->path)) {
             return $this->silencer->call('finfo_file', $this->silencer->call('finfo_open', FILEINFO_MIME_TYPE), $this->path);
         }
+    }
+
+    /**
+     * Creates a temporary directory.
+     *
+     * @param string $namespace the directory path in the system's temporary directory
+     * @param string $className the name of the test class
+     *
+     * @return string the path to the created directory
+     */
+    public function makeTmpDir(string $namespace, string $className): string
+    {
+        if (false !== ($pos = strrpos($className, '\\'))) {
+            $shortClass = substr($className, $pos + 1);
+        } else {
+            $shortClass = $className;
+        }
+
+        // Usage of realpath() is important if the temporary directory is a
+        // symlink to another directory (e.g. /var => /private/var on some Macs)
+        // We want to know the real path to avoid comparison failures with
+        // code that uses real paths only
+        $systemTempDir = str_replace('\\', '/', $this->silencer->call('realpath', sys_get_temp_dir()));
+        $basePath = $systemTempDir.'/'.$namespace.'/'.$shortClass;
+
+        $result = false;
+        $attempts = 0;
+
+        do {
+            $tmpDir = str_replace('/', DIRECTORY_SEPARATOR, $basePath.random_int(10000, 99999));
+
+            try {
+                $this->silencer->call('mkdir', $tmpDir, 0777);
+
+                $result = true;
+            } catch (FileException $exception) {
+                ++$attempts;
+            }
+        } while (false === $result && $attempts <= 10);
+
+        return $tmpDir;
     }
 
     /**

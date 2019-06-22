@@ -293,6 +293,11 @@ class AbstractFileHandler
         }
     }
 
+    public function match(string $pattern)
+    {
+        return $this->silencer->call('glob', $pattern, GLOB_ERR);
+    }
+
     /**
      * Match path against an extended wildcard pattern.
      *
@@ -389,8 +394,6 @@ class AbstractFileHandler
      *
      * @param string $path
      * @param string $content
-     *
-     * @return void
      */
     public function replace($content = null)
     {
@@ -546,7 +549,7 @@ class AbstractFileHandler
     public function mkdir($dir = null)
     {
         if ($dir !== null) {
-            $this->path = $dir;
+            $this->path = $this->silencer->call('dirname', $dir);
         }
 
         // Silence error for open_basedir; should fail in mkdir instead.
@@ -628,7 +631,7 @@ class AbstractFileHandler
     /**
      * See unlink() or unset().
      *
-     * @return boolean
+     * @return bool
      */
     public function delete(): bool
     {
@@ -650,7 +653,7 @@ class AbstractFileHandler
     /**
      * Checks whether the file is a directory.
      *
-     * @return boolean
+     * @return bool
      */
     public function is_dir(): bool
     {
@@ -693,7 +696,7 @@ class AbstractFileHandler
     /**
      * Checks whether the file is a regular file.
      *
-     * @return boolean
+     * @return bool
      */
     public function is_file(): bool
     {
@@ -847,7 +850,7 @@ class AbstractFileHandler
      * @param string $filename The filename to set the writable bit on
      * @param bool   $writable Whether to make the file writable or not
      *
-     * @return boolean
+     * @return bool
      */
     public function writable(bool $writable = true): bool
     {
@@ -864,7 +867,7 @@ class AbstractFileHandler
      * @param string $filename The filename to set the readable bit on
      * @param bool   $readable Whether to make the file readable or not
      *
-     * @return boolean
+     * @return bool
      */
     public function readable(bool $readable = true): bool
     {
@@ -880,7 +883,7 @@ class AbstractFileHandler
      *
      * @param bool $executable Whether to make the file executable or not
      *
-     * @return boolean
+     * @return bool
      */
     public function executable($executable = true): bool
     {
