@@ -21,9 +21,9 @@
         "sort-packages": true
     },
     "autoload": {
-        "files": [
-            "autoload.php"
-        ]
+        "psr-4": {
+            "BiuradPHP\\Toolbox\\FilePHP\\": "src/"
+        }
     },
     "require": {},
     "suggest": {
