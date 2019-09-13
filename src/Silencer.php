@@ -32,7 +32,7 @@ class Silencer
      *
      * @return mixed return value of the callback
      */
-    public static function call($callable /*, ...$parameters */)
+    public function call($callable /*, ...$parameters */)
     {
         try {
             $result = call_user_func_array($callable, array_slice(func_get_args(), 1));
